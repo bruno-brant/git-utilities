@@ -1,7 +1,21 @@
 #!/usr/bin/env pwsh
-# Repeatedly resolve conflicts with the default per-type strategies and
-# continue the in-progress rebase until it finishes or hits an error that
-# can't be auto-resolved. (Formerly git-tools' Start-Resolve.)
+<#
+.SYNOPSIS
+	Auto-resolves conflicts and continues an in-progress rebase to completion.
+
+.DESCRIPTION
+	Repeatedly applies the default per-type resolution strategies (the same ones
+	git-resolve-all uses) and runs `git rebase --continue`, looping until the
+	rebase finishes or hits an error that can't be auto-resolved. Sets
+	GIT_EDITOR to `true` so `git rebase --continue` doesn't open an editor.
+
+	Formerly git-tools' Start-Resolve.
+
+.EXAMPLE
+	git resolve-rebase
+
+	Drives the current rebase forward, auto-resolving conflicts as it goes.
+#>
 
 function Resolve-Status([string] $StatusLine, [scriptblock] $Action) {
 	git status | Select-String $StatusLine | ForEach-Object {

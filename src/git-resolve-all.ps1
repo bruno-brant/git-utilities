@@ -1,6 +1,24 @@
 #!/usr/bin/env pwsh
-# Resolve every conflicted file using the per-type default strategy.
-# Mirrors the individual git-resolve-* subcommands.
+<#
+.SYNOPSIS
+	Resolves every conflicted file using the per-type default strategy.
+
+.DESCRIPTION
+	Applies the default resolution for each conflict type in one pass, mirroring
+	the individual git-resolve-* subcommands:
+
+	  both modified    -> keep theirs (checkout --theirs + add)
+	  deleted by us    -> keep the file (git add)
+	  deleted by them  -> remove the file (git rm)
+	  added by them    -> keep the file (git add)
+	  both deleted     -> remove the file (git rm)
+	  added by us      -> remove the file (git rm)
+
+.EXAMPLE
+	git resolve-all
+
+	Resolves all conflicted files in the current merge or rebase.
+#>
 
 function Resolve-Status([string] $StatusLine, [scriptblock] $Action) {
 	git status | Select-String $StatusLine | ForEach-Object {
