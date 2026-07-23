@@ -4,18 +4,17 @@
 	Resolves "deleted by them" merge conflicts by removing the file.
 
 .DESCRIPTION
-	Scans `git status` for files in the "deleted by them" conflict state —
-	deleted on the other side but present on the current branch — and removes
-	each with `git rm`, accepting the deletion.
+	For each file `git status` reports as "deleted by them" — deleted on the
+	other side but present on the current branch — removes it with `git rm`,
+	accepting the deletion. Relies on the `git get-fileswithstatus` helper being
+	on your PATH (installed via install.sh / install.ps1).
 
 .EXAMPLE
 	git resolve-deletedbythem
 
 	Removes every "deleted by them" file in the current conflict.
 #>
-$statusLine = "deleted by them: "
-git status | Select-String $statusLine | ForEach-Object {
-	$file = $_.ToString().Replace($statusLine, "").Trim()
-	"Removing deleted file $file"
-	git rm $file
+git get-fileswithstatus "deleted by them" | ForEach-Object {
+	"Removing deleted file $_"
+	git rm $_
 }

@@ -37,3 +37,9 @@ Two orchestrators build on those:
 - `git-resolve-rebase.ps1` — repeatedly runs the resolvers and `git rebase
   --continue` until the rebase finishes or hits a conflict it can't
   auto-resolve. (Replaces the old `git-tools.ps1` `Start-Resolve`.)
+
+All of the above share a single helper, `git-get-fileswithstatus.ps1`, which
+lists the files in a given conflict state (e.g. `git-get-fileswithstatus.ps1
+"both modified"`). Its `Status` parameter tab-completes and accepts only the
+six conflict labels. Because the resolvers call each other and the helper as
+git subcommands, they need to be installed / on your PATH to run.

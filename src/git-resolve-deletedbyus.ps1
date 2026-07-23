@@ -4,18 +4,17 @@
 	Resolves "deleted by us" merge conflicts by keeping the file.
 
 .DESCRIPTION
-	Scans `git status` for files in the "deleted by us" conflict state — deleted
-	on the current branch but present on the other side — and stages each with
-	`git add`, keeping the incoming version rather than the deletion.
+	For each file `git status` reports as "deleted by us" — deleted on the
+	current branch but present on the other side — stages it with `git add`,
+	keeping the incoming version. Relies on the `git get-fileswithstatus` helper
+	being on your PATH (installed via install.sh / install.ps1).
 
 .EXAMPLE
 	git resolve-deletedbyus
 
 	Keeps every "deleted by us" file in the current conflict.
 #>
-$statusLine = "deleted by us: "
-git status | Select-String $statusLine | ForEach-Object {
-	$file = $_.ToString().Replace($statusLine, "").Trim()
-	"Adding new file $file"
-	git add $file
+git get-fileswithstatus "deleted by us" | ForEach-Object {
+	"Adding new file $_"
+	git add $_
 }
