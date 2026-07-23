@@ -20,17 +20,16 @@ directory (machine-specific, never checked in).
 ## Conflict resolvers (git-resolve-*.ps1)
 
 Helpers for resolving merge/rebase conflicts, one script per conflict type.
-Each applies the sensible default for that type to every matching file. Run
-them from `src/`, e.g. `./src/git-resolve-all.ps1`.
+Each applies the sensible default for that type to every matching file.
 
-| Script | Conflict | Action |
-| --- | --- | --- |
-| `git-resolve-bothmodified.ps1` | both modified | keep theirs (`checkout --theirs` + add) |
-| `git-resolve-deletedbyus.ps1` | deleted by us | keep the file (`git add`) |
-| `git-resolve-deletedbythem.ps1` | deleted by them | remove the file (`git rm`) |
-| `git-resolve-addedbythem.ps1` | added by them | keep the file (`git add`) |
-| `git-resolve-addedbyus.ps1` | added by us | remove the file (`git rm`) |
-| `git-resolve-bothdeleted.ps1` | both deleted | remove the file (`git rm`) |
+| Script                          | Conflict        | Action                                  |
+|---------------------------------|-----------------|-----------------------------------------|
+| `git-resolve-bothmodified.ps1`  | both modified   | keep theirs (`checkout --theirs` + add) |
+| `git-resolve-deletedbyus.ps1`   | deleted by us   | keep the file (`git add`)               |
+| `git-resolve-deletedbythem.ps1` | deleted by them | remove the file (`git rm`)              |
+| `git-resolve-addedbythem.ps1`   | added by them   | keep the file (`git add`)               |
+| `git-resolve-addedbyus.ps1`     | added by us     | remove the file (`git rm`)              |
+| `git-resolve-bothdeleted.ps1`   | both deleted    | remove the file (`git rm`)              |
 
 Two orchestrators build on those:
 
