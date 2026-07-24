@@ -24,16 +24,6 @@ curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/inst
 
 You still need `pwsh` installed — the script tells you how if it's missing.
 
-### Homebrew (macOS)
-
-```sh
-brew install bruno-brant/tap/git-utilities
-```
-
-Homebrew pulls in `pwsh` for you (via the `powershell` cask). On Linux, `pwsh`
-isn't available as a brew formula, so install it from Microsoft's package repo
-and use the quick-install script above instead.
-
 ### Windows
 
 ```powershell
