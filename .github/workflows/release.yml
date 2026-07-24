@@ -1,0 +1,48 @@
+name: release
+
+# Continuous delivery: on a version tag, pack the tools into release archives
+# (git-utilities.tar.gz for macOS/Linux, git-utilities.zip for Windows) and
+# attach them to the GitHub Release for that tag. The fixed asset names let the
+# installers fetch them from the stable /releases/latest/download/ URL.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage scripts
+        run: |
+          mkdir -p dist
+          cp src/git-*.ps1 dist/
+          cp LICENSE README.md dist/ 2>/dev/null || true
+
+      - name: Create archives
+        run: |
+          tar -czf git-utilities.tar.gz -C dist .
+          ( cd dist && zip -qr ../git-utilities.zip . )
+
+      - name: Record checksums
+        run: |
+          {
+            echo '### git-utilities archives'
+            echo '```'
+            sha256sum git-utilities.tar.gz git-utilities.zip
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            git-utilities.tar.gz
+            git-utilities.zip
+          generate_release_notes: true
