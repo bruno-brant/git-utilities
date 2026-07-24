@@ -9,8 +9,9 @@ them like `git config-email` or `git-resolve-all`.
 
 ### Quick install (macOS / Linux)
 
-No clone required — this downloads the latest release, unpacks it, and links the
-commands into `~/.local/bin`:
+**Prerequisites**: you need pwsh available in the machine. The script will flag it.
+
+Install by running the install script - it'll download and install the utilities.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh
@@ -22,9 +23,9 @@ To pass options, append them after `-s --`, e.g. a custom bin directory:
 curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh -s -- --bin ~/bin
 ```
 
-You still need `pwsh` installed — the script tells you how if it's missing.
-
 ### Windows
+
+Simply run the script. There are no aditional requirements.
 
 ```powershell
 irm https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.ps1 | iex
