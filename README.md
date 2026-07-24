@@ -3,45 +3,68 @@
 A collection of PowerShell git helper scripts that work on macOS, Linux, and
 Windows. They run on [PowerShell (`pwsh`)](https://learn.microsoft.com/powershell),
 which is cross-platform, and install as native git subcommands so you can call
-them like `git config-email` or `git worktree-add`.
+them like `git config-email` or `git-resolve-all`.
 
 ## Install
 
-**macOS / Linux:**
+### Quick install (macOS / Linux)
+
+No clone required — this downloads the latest release, unpacks it, and links the
+commands into `~/.local/bin`:
 
 ```sh
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh
 ```
 
-This symlinks each script into `~/.local/bin` (override with `--bin DIR`) so
-edits to the repo take effect immediately. Pass `--copy` to copy instead of
-symlink. If `pwsh` isn't installed, the script tells you how to get it; the
-utilities need it to run.
+To pass options, append them after `-s --`, e.g. a custom bin directory:
 
-**Windows:**
+```sh
+curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh -s -- --bin ~/bin
+```
+
+You still need `pwsh` installed — the script tells you how if it's missing.
+
+### Homebrew (macOS)
+
+```sh
+brew install bruno-brant/tap/git-utilities
+```
+
+Homebrew pulls in `pwsh` for you (via the `powershell` cask). On Linux, `pwsh`
+isn't available as a brew formula, so install it from Microsoft's package repo
+and use the quick-install script above instead.
+
+### Windows
 
 ```powershell
-./install.ps1
+irm https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.ps1 | iex
 ```
 
-This generates a `.cmd` shim for each script in `%USERPROFILE%\bin` (override
-with `-BinDir`) and adds that directory to your user PATH.
+Downloads the latest release, unpacks it, generates a `.cmd` shim per command in
+`%USERPROFILE%\bin`, and adds it to your user PATH.
+
+### From a checkout (for development)
+
+Clone the repo and run the installer from inside it; it links the commands
+straight out of `src/`, so your edits take effect immediately:
+
+```sh
+./install.sh          # macOS / Linux
+./install.ps1         # Windows
+```
+
+Add `--copy` (or `-Copy`) to copy the scripts instead of symlinking them.
 
 ## Usage
 
-Once installed and on your PATH, the scripts are available as git subcommands
-(drop the `git-` prefix and the `.ps1`):
+Once installed and on your PATH, each script works both as a standalone command
+and as a git subcommand — `git-config-email` or `git config-email`:
 
 ```sh
 git config-email -Init
 git new-branch my-feature
 git worktree-add
 ```
-
-You can also run most scripts directly from `src/` without installing, e.g.
-`./src/git-config-email.ps1 -Init`. The exception is the conflict resolvers
-below, which call each other as git subcommands and so need to be installed
-first.
 
 ### git config-email
 
@@ -58,27 +81,27 @@ directory (machine-specific, never checked in).
   and also saves the name/email into `~/.git-config-email.json` so they show up
   in future tab completions.
 
-### git resolve-* (conflict resolvers)
+### Conflict resolvers (git-resolve-*)
 
-Helpers for resolving merge/rebase conflicts, one subcommand per conflict type.
+Helpers for resolving merge/rebase conflicts, one command per conflict type.
 Each applies the sensible default for that type to every matching file:
 
 | Command                     | Conflict        | Action                                  |
 |-----------------------------|-----------------|-----------------------------------------|
-| `git resolve-bothmodified`  | both modified   | keep theirs (`checkout --theirs` + add) |
-| `git resolve-deletedbyus`   | deleted by us   | keep the file (`git add`)               |
-| `git resolve-deletedbythem` | deleted by them | remove the file (`git rm`)              |
-| `git resolve-addedbythem`   | added by them   | keep the file (`git add`)               |
-| `git resolve-addedbyus`     | added by us     | remove the file (`git rm`)              |
-| `git resolve-bothdeleted`   | both deleted    | remove the file (`git rm`)              |
+| `git-resolve-bothmodified`  | both modified   | keep theirs (`checkout --theirs` + add) |
+| `git-resolve-deletedbyus`   | deleted by us   | keep the file (`git add`)               |
+| `git-resolve-deletedbythem` | deleted by them | remove the file (`git rm`)              |
+| `git-resolve-addedbythem`   | added by them   | keep the file (`git add`)               |
+| `git-resolve-addedbyus`     | added by us     | remove the file (`git rm`)              |
+| `git-resolve-bothdeleted`   | both deleted    | remove the file (`git rm`)              |
 
 Two orchestrators build on those:
 
-- `git resolve-all` — applies every strategy above in one pass.
-- `git resolve-rebase` — repeatedly runs `resolve-all` and `git rebase
+- `git-resolve-all` — applies every strategy above in one pass.
+- `git-resolve-rebase` — repeatedly runs `git-resolve-all` and `git rebase
   --continue` until the rebase finishes or hits a conflict it can't
   auto-resolve.
 
-They all share a single helper, `git get-fileswithstatus`, which lists the
-files in a given conflict state (e.g. `git get-fileswithstatus "both modified"`).
-Its `Status` argument tab-completes and accepts only the six conflict labels.
+They all share a single helper, `git-get-fileswithstatus`, which lists the files
+in a given conflict state (e.g. `git-get-fileswithstatus "both modified"`). Its
+`Status` argument tab-completes and accepts only the six conflict labels.
