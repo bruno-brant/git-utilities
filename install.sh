@@ -41,8 +41,13 @@ VERSION="${GIT_UTILITIES_VERSION:-}"
 
 usage() {
 	# Print the leading comment block (skip the shebang, stop at the first
-	# non-comment line).
-	awk 'NR==1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+	# non-comment line). When piped, "$0" isn't a readable file, so fall back
+	# to a one-line summary.
+	if [ -f "$0" ]; then
+		awk 'NR==1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+	else
+		echo "Usage: install.sh [--flavor bash|pwsh] [--bin DIR] [--copy] [--version vX.Y.Z] [--skip-pwsh-check]"
+	fi
 	exit "${1:-0}"
 }
 
@@ -69,7 +74,14 @@ esac
 
 # --- locate the scripts: a local src/ checkout, or a downloaded release ------
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || echo "")
+# Only treat this as a checkout when "$0" is a real script file on disk.
+# When piped (curl ... | sh) "$0" is just the shell's name, and resolving its
+# dirname would wrongly point at the current directory -- which silently
+# installs from a local clone if you happen to be standing in one.
+SCRIPT_DIR=""
+if [ -f "$0" ]; then
+	SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || echo "")
+fi
 
 if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/src/$FLAVOR" ]; then
 	# Run from a checkout: link straight out of src/<flavor>/.
