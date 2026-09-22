@@ -1,47 +1,57 @@
 # git-utilities
 
-A collection of PowerShell git helper scripts that work on macOS, Linux, and
-Windows. They run on [PowerShell (`pwsh`)](https://learn.microsoft.com/powershell),
-which is cross-platform, and install as native git subcommands so you can call
-them like `git config-email` or `git-resolve-all`.
+A collection of git helper scripts that install as native git subcommands, so
+you can call them like `git-resolve-all` or `git config-email`.
+
+They ship in **two flavors**, maintained side by side:
+
+| Flavor | Location    | Requires            |
+|--------|-------------|---------------------|
+| bash   | `src/bash/` | bash (no pwsh)      |
+| pwsh   | `src/pwsh/` | [PowerShell](https://learn.microsoft.com/powershell) |
+
+Every command exists in both flavors under the same name — only the extension
+differs (`git-resolve-all.sh` / `git-resolve-all.ps1`). Installed, both drop
+the extension, so the command is `git-resolve-all` either way.
+
+`install.sh` installs the **bash** flavor by default and `install.ps1` installs
+the **pwsh** flavor; either can be overridden.
 
 ## Install
 
 ### Quick install (macOS / Linux)
 
-**Prerequisites**: you need pwsh available in the machine. The script will flag it.
-
-Install by running the install script - it'll download and install the utilities.
+No clone and no pwsh required — this downloads the latest release, unpacks it,
+and links the bash commands into `~/.local/bin`:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh
 ```
 
-To pass options, append them after `-s --`, e.g. a custom bin directory:
+To pass options, append them after `-s --`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh -s -- --bin ~/bin
+curl -fsSL https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.sh | sh -s -- --bin ~/bin --flavor pwsh
 ```
 
 ### Windows
-
-Simply run the script. There are no aditional requirements.
 
 ```powershell
 irm https://raw.githubusercontent.com/bruno-brant/git-utilities/main/install.ps1 | iex
 ```
 
-Downloads the latest release, unpacks it, generates a `.cmd` shim per command in
-`%USERPROFILE%\bin`, and adds it to your user PATH.
+Downloads the latest release, generates a `.cmd` shim per command in
+`%USERPROFILE%\bin`, and adds it to your user PATH. Use `-Flavor bash` to shim
+the bash scripts instead (needs bash on PATH, e.g. from Git for Windows).
 
 ### From a checkout (for development)
 
-Clone the repo and run the installer from inside it; it links the commands
-straight out of `src/`, so your edits take effect immediately:
+Run the installer from inside a clone; it links straight out of
+`src/<flavor>/`, so your edits take effect immediately:
 
 ```sh
-./install.sh          # macOS / Linux
-./install.ps1         # Windows
+./install.sh                  # bash flavor
+./install.sh --flavor pwsh    # pwsh flavor
 ```
 
 Add `--copy` (or `-Copy`) to copy the scripts instead of symlinking them.
@@ -52,25 +62,30 @@ Once installed and on your PATH, each script works both as a standalone command
 and as a git subcommand — `git-config-email` or `git config-email`:
 
 ```sh
-git config-email -Init
+git config-email --email me@example.com
 git new-branch my-feature
-git worktree-add
+git resolve-all
 ```
+
+> **Flag conventions differ between flavors.** The bash scripts take POSIX-style
+> flags (`--email`, `--force`, `--branch`); the pwsh scripts take PowerShell
+> parameters (`-Email`, `-Force`, `-BranchName`). Run any command with `--help`
+> (bash) or `Get-Help` (pwsh) for its own usage.
 
 ### git config-email
 
-Sets `git config user.name` / `user.email` for the current repo, with tab
-completion for names/emails you've used before.
+Sets `git config user.name` / `user.email` for the current repo, and can
+remember identities in `~/.git-config-email.json` (machine-specific, never
+checked in).
 
-Completions are sourced from `~/.git-config-email.json`, a file in your home
-directory (machine-specific, never checked in).
+```sh
+git config-email --init                                   # create the file
+git config-email --email me@example.com                   # set the config
+git config-email --email me@example.com --save            # set and remember
+git config-email --name "Some One" --email me@example.com
+```
 
-- `git config-email -Init` — creates `~/.git-config-email.json` if it doesn't
-  already exist.
-- `git config-email -UserName "..." -Email "..."` — sets the git config.
-- `git config-email -UserName "..." -Email "..." -Save` — sets the git config
-  and also saves the name/email into `~/.git-config-email.json` so they show up
-  in future tab completions.
+The pwsh flavor takes `-Init`, `-UserName`, `-Email`, `-Save` instead.
 
 ### Conflict resolvers (git-resolve-*)
 
@@ -94,5 +109,30 @@ Two orchestrators build on those:
   auto-resolve.
 
 They all share a single helper, `git-get-fileswithstatus`, which lists the files
-in a given conflict state (e.g. `git-get-fileswithstatus "both modified"`). Its
-`Status` argument tab-completes and accepts only the six conflict labels.
+in a given conflict state (e.g. `git-get-fileswithstatus "both modified"`). It
+accepts only the six conflict labels above.
+
+Because the resolvers invoke each other and the helper as git subcommands, they
+need to be installed / on your PATH to run.
+
+### git worktree-add
+
+Creates a sibling worktree that mirrors your current working state, replacing
+every git-ignored path with a link back to the source repo (so `node_modules`
+and friends are one link, not a copy).
+
+The two flavors are **not** literal ports of each other:
+
+- **pwsh** is Windows-specific — it uses `robocopy`, NTFS junctions, and a
+  single elevated batch for file symlinks.
+- **bash** is the Unix counterpart — `rsync` plus plain symlinks, no elevation.
+  Note that git reports a directory *symlink* as a symlink rather than walking
+  into it, so a `.gitignore` rule written as `node_modules/` may not match it;
+  prefer rules without a trailing slash if you hit that.
+
+## Releases
+
+Pushing a `v*` tag (or dispatching the `release` workflow with a version)
+packs both flavors into `git-utilities.tar.gz` and `git-utilities.zip` and
+attaches them to a GitHub Release. Both archives contain `bash/` and `pwsh/`
+subdirectories, so either installer can pick the flavor it wants.

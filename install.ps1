@@ -5,6 +5,10 @@
 	git subcommands (e.g. `git config-email`, `git-resolve-all`).
 
 .DESCRIPTION
+	The tools ship in two flavors: PowerShell (src/pwsh) and bash (src/bash).
+	This installer uses the pwsh flavor by default; pass -Flavor bash to
+	install the bash one instead (needs bash on PATH, e.g. Git for Windows).
+
 	Two ways to run it:
 
 	  1. Piped from the web (no clone needed) — downloads the latest release,
@@ -19,6 +23,9 @@
 	that directory to your user PATH. This installer targets Windows; on
 	macOS/Linux, use ./install.sh.
 
+.PARAMETER Flavor
+	Which flavor to install: 'pwsh' (default) or 'bash'.
+
 .PARAMETER BinDir
 	Where to put the shims (default: $HOME\bin).
 
@@ -32,6 +39,8 @@
 	Don't modify your user PATH.
 #>
 param(
+	[ValidateSet('pwsh', 'bash')]
+	[string] $Flavor = 'pwsh',
 	[string] $BinDir = (Join-Path $HOME 'bin'),
 	[switch] $Copy,
 	[string] $Version,
@@ -46,19 +55,17 @@ if (-not $IsWindows) {
 	exit 1
 }
 
-# Library scripts that are meant to be dot-sourced, not run as subcommands.
-$Exclude = @()
-
+$ext = if ($Flavor -eq 'bash') { '.sh' } else { '.ps1' }
 $dataDir = Join-Path $env:LOCALAPPDATA 'git-utilities'
 
 # --- locate the scripts: a local src/ checkout, or a downloaded release ------
 
 $scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { $null }
-$localSrc = if ($scriptRoot) { Join-Path $scriptRoot 'src' } else { $null }
+$localSrc = if ($scriptRoot) { Join-Path (Join-Path $scriptRoot 'src') $Flavor } else { $null }
 
 if ($localSrc -and (Test-Path $localSrc)) {
 	$srcDir = $localSrc
-	Write-Host "Installing from source checkout: $srcDir"
+	Write-Host "Installing the $Flavor flavor from source checkout: $srcDir"
 } else {
 	# Piped from the web (or run outside a checkout): download a release.
 	if ($Version) {
@@ -84,19 +91,35 @@ if ($localSrc -and (Test-Path $localSrc)) {
 	New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 	Expand-Archive -Path $zip -DestinationPath $dataDir -Force
 	Remove-Item -Recurse -Force $tmp
-	$srcDir = $dataDir
+
+	$flavorDir = Join-Path $dataDir $Flavor
+	if (Test-Path $flavorDir) {
+		$srcDir = $flavorDir
+	} else {
+		# Releases before the bash flavor shipped a flat (pwsh-only) layout.
+		$srcDir = $dataDir
+	}
 	Write-Host "Unpacked release into $srcDir"
 }
 
-$pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
-if (-not $pwshPath) { $pwshPath = (Join-Path $PSHOME 'pwsh.exe') }
+# --- dependency check --------------------------------------------------------
+
+if ($Flavor -eq 'bash') {
+	$bashPath = (Get-Command bash -ErrorAction SilentlyContinue).Source
+	if (-not $bashPath) {
+		Write-Error "The bash flavor needs bash on your PATH (e.g. from Git for Windows). Use -Flavor pwsh instead."
+		exit 1
+	}
+} else {
+	$pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+	if (-not $pwshPath) { $pwshPath = (Join-Path $PSHOME 'pwsh.exe') }
+}
 
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
 
 $count = 0
-Get-ChildItem -Path $srcDir -Filter 'git-*.ps1' | ForEach-Object {
+Get-ChildItem -Path $srcDir -Filter "git-*$ext" | ForEach-Object {
 	$base = $_.BaseName
-	if ($Exclude -contains $base) { return }
 
 	if ($Copy) {
 		$scriptPath = Join-Path $dataDir $_.Name
@@ -107,16 +130,23 @@ Get-ChildItem -Path $srcDir -Filter 'git-*.ps1' | ForEach-Object {
 
 	# A .cmd shim lets `git <name>` and `<name>` both resolve on Windows.
 	$shim = Join-Path $BinDir "$base.cmd"
-	@(
-		'@echo off'
-		"`"$pwshPath`" -NoProfile -File `"$scriptPath`" %*"
-	) | Set-Content -Path $shim -Encoding Ascii
+	if ($Flavor -eq 'bash') {
+		$line = "`"$bashPath`" `"$scriptPath`" %*"
+	} else {
+		$line = "`"$pwshPath`" -NoProfile -File `"$scriptPath`" %*"
+	}
+	@('@echo off', $line) | Set-Content -Path $shim -Encoding Ascii
 	$count++
 }
 
-Write-Host "Installed $count git subcommand(s) into $BinDir."
+if ($count -eq 0) {
+	Write-Error "No git-*$ext scripts found in $srcDir. This release may predate the $Flavor flavor; try a newer release or another -Flavor."
+	exit 1
+}
 
-# --- PATH update -----------------------------------------------------------
+Write-Host "Installed $count git subcommand(s) ($Flavor flavor) into $BinDir."
+
+# --- PATH update -------------------------------------------------------------
 
 if (-not $SkipPathUpdate) {
 	$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
