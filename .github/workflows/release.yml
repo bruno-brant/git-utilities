@@ -5,6 +5,9 @@ name: release
 # attach them to a GitHub Release. The fixed asset names let the installers
 # fetch them from the stable /releases/latest/download/ URL.
 #
+# Both archives carry both flavors, as bash/ and pwsh/ subdirectories, so
+# either installer can pick the one it wants.
+#
 # Triggered either by pushing a version tag, or manually (workflow_dispatch)
 # with a version to create — the manual path creates the tag itself, so no
 # tag push is required.
@@ -40,8 +43,9 @@ jobs:
 
       - name: Stage scripts
         run: |
-          mkdir -p dist
-          cp src/git-*.ps1 dist/
+          mkdir -p dist/bash dist/pwsh
+          cp src/bash/git-*.sh dist/bash/
+          cp src/pwsh/git-*.ps1 dist/pwsh/
           cp LICENSE README.md dist/ 2>/dev/null || true
 
       - name: Create archives
