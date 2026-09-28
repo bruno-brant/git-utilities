@@ -115,20 +115,53 @@ accepts only the six conflict labels above.
 Because the resolvers invoke each other and the helper as git subcommands, they
 need to be installed / on your PATH to run.
 
-### git worktree-add
+### git worktree-add and git worktree-mirror
 
-Creates a sibling worktree that mirrors your current working state, replacing
-every git-ignored path with a link back to the source repo (so `node_modules`
-and friends are one link, not a copy).
+Two commands that set up a worktree to mirror your current working state, with
+every git-ignored path replaced by a link back to the source repo (so
+`node_modules` and friends are one link, not a copy):
+
+- **`git worktree-add <workstream>`** creates a sibling worktree
+  `<repo>-<workstream>` on a new branch `u/<user>/<workstream>`, then runs
+  `git worktree-mirror` on it. Pass `--no-mirror` (pwsh: `-NoMirror`) to only
+  create it.
+- **`git worktree-mirror [<path>]`** mirrors into an *existing* worktree
+  (default: the one you're in). It finds the source repo on its own, so it also
+  works on a worktree you created yourself:
+
+  ```sh
+  git worktree add ../myrepo-experiment
+  git worktree-mirror ../myrepo-experiment
+  ```
+
+Ignored paths are linked at the highest level possible: a directory whose
+contents are *all* ignored becomes a single link, even when no `.gitignore` rule
+names the directory itself (`logs/` holding only `*.log` files, say). A
+directory that also holds tracked or not-yet-committed files stays a real
+directory, and only the ignored files inside it are linked — linking it whole
+would make those files shared with the source instead of copied.
+
+Mirroring overwrites the target — files that aren't in the source are deleted
+and ignored paths become links — so `git worktree-mirror` is careful about what
+it will touch:
+
+- It **never** runs on the main worktree (the source itself).
+- It **refuses** when the target has uncommitted changes, or real files in
+  git-ignored paths (e.g. a local `.env`), since both would be lost. Pass
+  `--force` (pwsh: `-Force`) to overwrite anyway.
+- A freshly created worktree is always clean, so both flows above just work.
+  **Re-mirroring** an already-mirrored worktree needs `--force`, because the
+  first mirror copied the source's uncommitted changes into it.
 
 The two flavors are **not** literal ports of each other:
 
 - **pwsh** is Windows-specific — it uses `robocopy`, NTFS junctions, and a
   single elevated batch for file symlinks.
-- **bash** is the Unix counterpart — `rsync` plus plain symlinks, no elevation.
-  Note that git reports a directory *symlink* as a symlink rather than walking
-  into it, so a `.gitignore` rule written as `node_modules/` may not match it;
-  prefer rules without a trailing slash if you hit that.
+- **bash** is the Unix counterpart — `rsync` (which must be installed) plus
+  plain symlinks, no elevation. Note that git reports a directory *symlink* as
+  a symlink rather than walking into it, so a `.gitignore` rule written as
+  `node_modules/` may not match it; prefer rules without a trailing slash if
+  you hit that.
 
 ## Releases
 
