@@ -1,0 +1,37 @@
+name: pr-title
+
+# release-please decides each release from Conventional Commit titles, and
+# squash-merging uses the PR title as the commit title. A PR titled any other
+# way merges fine but is silently left out of the version bump and changelog,
+# so flag it here.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  conventional-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR title
+        env:
+          # Via env, not ${{ }} inside the script: the title is untrusted input.
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|perf|refactor|docs|test|build|ci|chore|style|revert)(\([a-z0-9._/-]+\))?!?: .+'
+          if printf '%s' "$TITLE" | grep -Eq "$re"; then
+            echo "OK: $TITLE"
+            exit 0
+          fi
+          echo "::error title=PR title is not a Conventional Commit::'$TITLE'"
+          cat <<'MSG'
+          Use a Conventional Commit title, which becomes the squash-merge commit:
+            fix|perf|revert: ...  -> patch release
+            feat: ...             -> minor release
+            feat!: ...            -> breaking change (minor while < 1.0)
+            docs|ci|chore|refactor|test|build|style: ...  -> no release
+          An optional scope is allowed, e.g. "fix(install): handle piped runs".
+          MSG
+          exit 1
