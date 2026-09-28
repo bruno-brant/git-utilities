@@ -118,7 +118,7 @@ if [ "$force" -eq 0 ]; then
 				fi
 				;;
 		esac
-	done < <(git -C "$target" status --ignored --porcelain=v1 -z 2>/dev/null || true)
+	done < <(git -C "$target" status --ignored --untracked-files=normal --porcelain=v1 -z 2>/dev/null || true)
 
 	if [ "${#real_ignored[@]}" -gt 0 ]; then
 		problems+=("it has files in git-ignored paths: ${real_ignored[*]}")
@@ -140,6 +140,9 @@ echo "Worktree    : $target"
 # --- 4. Discover git-ignored paths in the SOURCE repo ------------------------
 # '!!' records from porcelain v1 are the ignored entries; directories carry a
 # trailing slash. Paths are relative to the repo root. -z keeps them unquoted.
+# --untracked-files=normal makes git report a directory whose contents are all
+# ignored as ONE entry, so it gets one link; a user's
+# status.showUntrackedFiles=all would otherwise list, and link, every file.
 ignored=()
 while IFS= read -r -d '' rec; do
 	case "$rec" in
@@ -149,7 +152,7 @@ while IFS= read -r -d '' rec; do
 			[ -n "$p" ] && ignored+=("$p")
 			;;
 	esac
-done < <(git -C "$source_root" status --ignored --porcelain=v1 -z 2>/dev/null || true)
+done < <(git -C "$source_root" status --ignored --untracked-files=normal --porcelain=v1 -z 2>/dev/null || true)
 
 ignored_count=${#ignored[@]}
 echo "Found $ignored_count git-ignored path(s) to symlink."

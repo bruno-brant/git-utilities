@@ -134,6 +134,13 @@ every git-ignored path replaced by a link back to the source repo (so
   git worktree-mirror ../myrepo-experiment
   ```
 
+Ignored paths are linked at the highest level possible: a directory whose
+contents are *all* ignored becomes a single link, even when no `.gitignore` rule
+names the directory itself (`logs/` holding only `*.log` files, say). A
+directory that also holds tracked or not-yet-committed files stays a real
+directory, and only the ignored files inside it are linked — linking it whole
+would make those files shared with the source instead of copied.
+
 Mirroring overwrites the target — files that aren't in the source are deleted
 and ignored paths become links — so `git worktree-mirror` is careful about what
 it will touch:

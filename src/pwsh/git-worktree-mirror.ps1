@@ -103,7 +103,7 @@ if (-not $Force) {
     # core.quotePath=false stops git octal-escaping non-ASCII names; the other
     # characters it quotes can't appear in Windows filenames.
     $realIgnored = @(
-        & git -c core.quotePath=false -C $target status --ignored --porcelain=v1 2>$null |
+        & git -c core.quotePath=false -C $target status --ignored --untracked-files=normal --porcelain=v1 2>$null |
             Where-Object { $_.StartsWith('!!') } |
             ForEach-Object { $_.Substring(2).Trim().TrimEnd('/') } |
             Where-Object {
@@ -131,7 +131,10 @@ Write-Host "Worktree    : $target"     -ForegroundColor Cyan
 # Capture these BEFORE mirroring so we know exactly which paths to link.
 # `!! ` lines from porcelain v1 are the ignored entries; directories carry a
 # trailing slash. Paths are forward-slashed and relative to the repo root.
-$ignoredRaw = & git -c core.quotePath=false -C $sourceRoot status --ignored --porcelain=v1 2>$null
+# --untracked-files=normal makes git report a directory whose contents are all
+# ignored as ONE entry, so it gets one junction; a user's
+# status.showUntrackedFiles=all would otherwise list, and link, every file.
+$ignoredRaw = & git -c core.quotePath=false -C $sourceRoot status --ignored --untracked-files=normal --porcelain=v1 2>$null
 $ignoredPaths = @(
     $ignoredRaw |
         Where-Object { $_.StartsWith('!!') } |
