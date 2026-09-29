@@ -165,7 +165,25 @@ The two flavors are **not** literal ports of each other:
 
 ## Releases
 
-Pushing a `v*` tag (or dispatching the `release` workflow with a version)
-packs both flavors into `git-utilities.tar.gz` and `git-utilities.zip` and
-attaches them to a GitHub Release. Both archives contain `bash/` and `pwsh/`
-subdirectories, so either installer can pick the flavor it wants.
+Releases are automated with
+[release-please](https://github.com/googleapis/release-please), driven by
+[Conventional Commit](https://www.conventionalcommits.org/) PR titles:
+
+| PR title                                  | Effect on the next release        |
+|-------------------------------------------|-----------------------------------|
+| `fix: …`, `perf: …`, `revert: …`          | patch bump                        |
+| `feat: …`                                 | minor bump                        |
+| `feat!: …` (or a `BREAKING CHANGE:` note) | breaking — a minor bump while 0.x |
+| `docs`, `ci`, `chore`, `refactor`, `test`, `build`, `style` | no release     |
+
+PRs are squash-merged, so the PR title becomes the commit that release-please
+reads; a `pr-title` check flags titles that don't follow the format.
+
+After each merge to `main`, release-please keeps a single **release PR** open
+that bumps `version.txt` and updates `CHANGELOG.md`. Merging that PR tags the
+release (`vX.Y.Z`) and publishes it, and the archives `git-utilities.tar.gz`
+and `git-utilities.zip` are built and attached. Both contain `bash/` and
+`pwsh/` subdirectories, so either installer can pick the flavor it wants.
+
+To release by hand instead, run the `release` workflow with a version, or push
+a `v*` tag.

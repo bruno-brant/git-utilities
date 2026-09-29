@@ -1,16 +1,17 @@
 name: release
 
-# Continuous delivery: pack the tools into release archives
-# (git-utilities.tar.gz for macOS/Linux, git-utilities.zip for Windows) and
-# attach them to a GitHub Release. The fixed asset names let the installers
-# fetch them from the stable /releases/latest/download/ URL.
+# Packs the tools into release archives (git-utilities.tar.gz for macOS/Linux,
+# git-utilities.zip for Windows) and attaches them to a GitHub Release. The
+# fixed asset names let the installers fetch them from the stable
+# /releases/latest/download/ URL.
 #
 # Both archives carry both flavors, as bash/ and pwsh/ subdirectories, so
 # either installer can pick the one it wants.
 #
-# Triggered either by pushing a version tag, or manually (workflow_dispatch)
-# with a version to create — the manual path creates the tag itself, so no
-# tag push is required.
+# Normally this runs automatically: release-please.yml calls it after merging
+# a release PR creates the release. It can also be run by hand:
+#   - dispatch it with a version (creates that tag and release), or
+#   - push a v* tag yourself.
 
 on:
   push:
@@ -20,6 +21,12 @@ on:
     inputs:
       version:
         description: "Version tag to create and release (e.g. v0.1.0)"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: "Tag of the (already created) release to attach archives to"
         required: true
         type: string
 
@@ -34,12 +41,12 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
+          # Dispatch and workflow_call pass a version; a tag push doesn't.
+          tag="${INPUT_VERSION:-$GITHUB_REF_NAME}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Stage scripts
         run: |
@@ -63,10 +70,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          files: |
-            git-utilities.tar.gz
-            git-utilities.zip
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Created already (by release-please, or by hand): just attach the
+            # archives and leave its notes alone.
+            gh release upload "$TAG" git-utilities.tar.gz git-utilities.zip --clobber
+          else
+            gh release create "$TAG" git-utilities.tar.gz git-utilities.zip \
+              --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          fi
