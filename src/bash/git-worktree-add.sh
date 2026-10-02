@@ -60,6 +60,13 @@ if [ "$no_mirror" -eq 0 ] && ! command -v git-worktree-mirror >/dev/null 2>&1; t
 	exit 1
 fi
 
+# This script finds worktrees by their path, so ignore any repository the
+# caller's environment pinned git to. A git shell alias, a hook or an IDE can
+# export GIT_DIR, and with GIT_DIR set but GIT_WORK_TREE unset git treats the
+# *current directory* as the top of the work tree -- so a run from a subfolder
+# would have mirrored into that subfolder. git lists the variables to clear.
+unset $(git rev-parse --local-env-vars)
+
 # --- 1. Resolve repo root ----------------------------------------------------
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
 	echo "Not inside a git repository. cd into the repo and try again." >&2
