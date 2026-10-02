@@ -58,6 +58,15 @@ param (
 
 $ErrorActionPreference = 'Stop'
 
+# This script finds worktrees by their path, so ignore any repository the
+# caller's environment pinned git to. A git shell alias, a hook or an IDE can
+# export GIT_DIR, and with GIT_DIR set but GIT_WORK_TREE unset git treats the
+# *current directory* as the top of the work tree -- so a run from a subfolder
+# would have mirrored into that subfolder. git lists the variables to clear.
+foreach ($name in (& git rev-parse --local-env-vars)) {
+    Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+}
+
 # --- 1. Resolve the target worktree ------------------------------------------
 $target = (& git -C $Path rev-parse --show-toplevel 2>$null)
 if (-not $target) {

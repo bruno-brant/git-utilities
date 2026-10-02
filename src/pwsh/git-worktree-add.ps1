@@ -53,6 +53,15 @@ if (-not $NoMirror -and -not (Get-Command git-worktree-mirror -ErrorAction Silen
     throw "git-worktree-mirror isn't on your PATH. Install the tools (install.ps1), or pass -NoMirror to only create the worktree."
 }
 
+# This script finds worktrees by their path, so ignore any repository the
+# caller's environment pinned git to. A git shell alias, a hook or an IDE can
+# export GIT_DIR, and with GIT_DIR set but GIT_WORK_TREE unset git treats the
+# *current directory* as the top of the work tree -- so a run from a subfolder
+# would have mirrored into that subfolder. git lists the variables to clear.
+foreach ($name in (& git rev-parse --local-env-vars)) {
+    Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+}
+
 # --- 1. Resolve repo root (works even when called from a subdirectory) --------
 $repoRoot = (& git rev-parse --show-toplevel 2>$null)
 if (-not $repoRoot) {
